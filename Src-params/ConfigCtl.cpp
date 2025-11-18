@@ -2,7 +2,7 @@
 #include "ui_ConfigureDialog.h"
 
 #include "Pixmaps/Icon-Config.xpm"
-
+#include <QStorageInfo>
 #include "Util.h"
 #include "MainApp.h"
 #include "ConfigCtl.h"
@@ -2587,8 +2587,8 @@ bool ConfigCtl::validDiskAvail( QString &err, DAQ::Params &q ) const
         }
 
         if( BPS > 0 ) {
-
-            quint64 avail   = availableDiskSpace( idir );
+            auto info = QStorageInfo(app->dataDir( idir));
+            auto avail   = info.bytesAvailable();
             int     mins    = avail / BPS / 60;
 
             if( mins <= q.sns.reqMins ) {

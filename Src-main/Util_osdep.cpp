@@ -21,14 +21,10 @@
     #include <QDir>
     #include <GL/gl.h>
     #include <windows.h>
-#elif defined(Q_WS_X11)
+#elif defined(Q_OS_LINUX)
     #include <GL/gl.h>
     #include <GL/glx.h>
     #include <X11/Xlib.h>
-#elif defined(Q_WS_MACX)
-    #include <agl.h>
-    #include <gl.h>
-#elif defined(Q_OS_LINUX)
     #include <sys/mman.h>
     #include <sys/types.h>
     #include <sys/stat.h>
@@ -37,10 +33,10 @@
     #include <sched.h>
     #include <time.h>
     #include <unistd.h>
-    #include <GL/gl.h>
-#elif defined(Q_OS_DARWIN)
+#elif defined(Q_OS_MACOS)
+    #include <agl.h>
+    #include <gl.h>
     #include <CoreServices/CoreServices.h>
-    #include <GL/gl.h>
 #endif
 
 /* ---------------------------------------------------------------- */
@@ -294,7 +290,7 @@ static const GLubyte *strChr( const GLubyte *str, GLubyte ch )
 }
 
 
-#ifdef Q_WS_X11
+#ifdef Q_OS_LINUX
 
 bool hasOpenGLXExtension( const char *ext_name )
 {
@@ -344,7 +340,7 @@ bool hasOpenGLXExtension( const char *ext_name )
     return false;
 }
 
-#else /* !Q_WS_X11 */
+#else /* !Q_OS_LINUX */
 
 bool hasOpenGLXExtension( const char * )
 {
@@ -398,7 +394,7 @@ bool hasOpenGLExtension( const char *ext_name )
 /* setOpenGLVSyncMode --------------------------------------------- */
 /* ---------------------------------------------------------------- */
 
-#ifndef Q_OS_WIN
+#ifdef Q_OS_WIN
 
 typedef BOOL (APIENTRY *wglswapfn_t)( int );
 
@@ -432,7 +428,7 @@ void setOpenGLVSyncMode( bool onoff )
     }
 }
 
-#elif defined(Q_WS_X11)
+#elif defined(Q_OS_LINUX)
 
 typedef int (*swap_t)( int );
 
@@ -471,7 +467,7 @@ void setOpenGLVSyncMode( bool onoff )
     }
 }
 
-#elif defined(Q_WS_MACX)
+#elif defined(Q_OS_MACOS)
 
 void setOpenGLVSyncMode( bool onoff )
 {
@@ -511,7 +507,7 @@ void setOpenGLVSyncMode( bool onoff )
     }
 }
 
-#else /* !Q_OS_WIN && !Q_WS_X11 && !Q_WS_MACX */
+#else /* !Q_OS_WIN && !Q_OS_LINUX && !Q_OS_MACOS */
 
 #warning Warning: setOpenGLVSyncMode() not implemented on this platform!
 

@@ -1990,8 +1990,10 @@ ImAcqThread::ImAcqThread(
 // Boost priority for worker handling single high channel count probe.
 // As of Qt 6.9.
 
-    if( streams.size() == 1 && streams[0].nAP > 384 )
-        thread->setServiceLevel( QThread::QualityOfService::High );
+    if( streams.size() == 1 && streams[0].nAP > 384 ) {
+        // Note: setServiceLevel is not available in Qt6 yet
+        // thread->setServiceLevel( QThread::QualityOfService::High );
+    }
 
     thread->start();
 
