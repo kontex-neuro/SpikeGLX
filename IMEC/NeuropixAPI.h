@@ -10,7 +10,9 @@
  */
 
 #pragma once
-
+#include <NeuropixAPI.hpp>
+#define XDAQ_API
+#ifndef XDAQ_API
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
@@ -2424,3 +2426,5 @@ namespace Neuropixels {
         NP_EXPORT NP_ErrorCode NP_APIC np_IMU_DfuWrite(int slot, int port, const uint8_t* data, size_t len, size_t* bytes_written);
     }
 } // namespace Neuropixels
+
+#endif

@@ -31,6 +31,9 @@ ui_*.h
 *.pro.user.*
 *.qmlproject.user
 *.qmlproject.user.*
+/.clangd
+/build.sh
+/CMakeUserPresets.json
 
 # Windows-specific
 Win32/
@@ -55,6 +58,7 @@ desktop.ini
 # Editor temporary files
 *~
 *.autosave
+/.vscode
 
 # Other
 *.bin
