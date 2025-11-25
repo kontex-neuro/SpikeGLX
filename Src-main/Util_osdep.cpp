@@ -34,8 +34,8 @@
     #include <time.h>
     #include <unistd.h>
 #elif defined(Q_OS_MACOS)
-    #include <agl.h>
-    #include <gl.h>
+    #include <AGL/agl.h>
+    #include <OpenGL/gl.h>
     #include <CoreServices/CoreServices.h>
 #endif
 
@@ -53,6 +53,8 @@
     #include <netinet/tcp.h>
     #include <arpa/inet.h>
 #endif
+
+#include <chrono>
 
 /* ---------------------------------------------------------------- */
 /* Statics -------------------------------------------------------- */
@@ -164,58 +166,12 @@ uint secsSinceBoot()
 /* getTime -------------------------------------------------------- */
 /* ---------------------------------------------------------------- */
 
-#ifdef Q_OS_WIN
-
 double getTime()
 {
-    static __int64  freq    = 0;
-    static __int64  t0      = 0;
-    __int64         tNow;
-
-    QueryPerformanceCounter( (LARGE_INTEGER*)&tNow );
-
-    if( !t0 )
-        t0 = tNow;
-
-    if( !freq )
-        QueryPerformanceFrequency( (LARGE_INTEGER*)&freq );
-
-    return double(tNow - t0) / double(freq);
+    using namespace std::chrono;
+    static const auto  start_time = steady_clock::now();
+    return duration<double>( steady_clock::now() - start_time ).count();
 }
-
-#elif defined(Q_OS_LINUX)
-
-double getTime()
-{
-    static double   t0 = -9999.;
-    struct timespec ts;
-
-    clock_gettime( CLOCK_MONOTONIC, &ts );
-
-    double  t = double(ts.tv_sec) + double(ts.tv_nsec) / 1e9;
-
-    if( t0 < 0.0 )
-        t0 = t;
-
-    return t - t0;
-}
-
-#else /* !Q_OS_WIN && !Q_OS_LINUX */
-
-double getTime()
-{
-    static QTime    t;
-    static bool     started = false;
-
-    if( !started ) {
-        t.start();
-        started = true;
-    }
-
-    return t.elapsed() / 1000.0;
-}
-
-#endif
 
 /* ---------------------------------------------------------------- */
 /* socketNoNagle -------------------------------------------------- */

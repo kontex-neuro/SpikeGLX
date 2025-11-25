@@ -1,8 +1,10 @@
 cmake_minimum_required(VERSION 3.25)
 project(SpikeGLX VERSION 4.0.0 LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 23)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+SET(CMAKE_MODULE_PATH
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake
+    ${CMAKE_MODULE_PATH}
+)
 
 find_package(Qt6 REQUIRED COMPONENTS Core Widgets Gui OpenGLWidgets Network Svg)
 find_package(xdaq REQUIRED)
@@ -11,13 +13,6 @@ find_package(PkgConfig REQUIRED)
 
 qt6_standard_project_setup()
 
-# Platform-specific compile definitions
-add_definitions(-DHAVE_IMEC)
-if(WIN32)
-    add_definitions(-DHAVE_VISA)
-    add_definitions(-DHAVE_NIDAQmx)
-endif()
-add_definitions(-DOPENGL54)
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_definitions(-DDO_SNAPSHOTS)
@@ -101,7 +96,7 @@ file(GLOB_RECURSE RTAUDIO_SOURCES "RtAudio/*.cpp")
 file(GLOB_RECURSE RTAUDIO_HEADERS "RtAudio/*.h")
 
 # Exclude Windows-specific ASIO files on Linux
-if(UNIX AND NOT APPLE)
+if(UNIX)
     list(FILTER RTAUDIO_SOURCES EXCLUDE REGEX ".*asio.*")
     list(FILTER RTAUDIO_SOURCES EXCLUDE REGEX ".*asiodrivers.*")
     list(FILTER RTAUDIO_SOURCES EXCLUDE REGEX ".*asiolist.*")
@@ -129,7 +124,7 @@ set(CMAKE_AUTOUIC_SEARCH_PATHS ${CMAKE_CURRENT_SOURCE_DIR}/Forms)
 qt6_add_resources(QRC_SOURCES ${QRC_FILES})
 
 # Create executable - Qt6 will automatically process .ui files
-qt_add_executable(SpikeGLX
+qt_add_executable(SpikeGLX MACOSX_BUNDLE
     ${SpikeGLX_SOURCES}
     ${SpikeGLX_HEADERS}
     ${SRC_AUDIO_SOURCES}
@@ -164,7 +159,10 @@ qt_add_executable(SpikeGLX
     ${SAMPLERATE_HEADERS}
     ${UI_FORMS}
     ${QRC_SOURCES}
+    IMEC/xdaq_npapi.cc
 )
+
+target_compile_features(SpikeGLX PRIVATE cxx_std_23)
 
 # Include directories
 target_include_directories(SpikeGLX PRIVATE
@@ -199,8 +197,19 @@ target_link_libraries(SpikeGLX PRIVATE
     xdaq::xdaq_npapi
 )
 
+target_compile_definitions(SpikeGLX PRIVATE
+    HAVE_IMEC
+    OPENGL54
+    $<$<PLATFORM_ID:Windows>:HAVE_VISA>
+    $<$<PLATFORM_ID:Windows>:HAVE_NIDAQmx>
+
+	$<$<PLATFORM_ID:Linux>:OS_LINUX>
+	$<$<PLATFORM_ID:Windows>:OS_WINDOWS>
+	$<$<PLATFORM_ID:Darwin>:OS_MACOS>
+)
+
 # Linux specific settings
-if(UNIX AND NOT APPLE)
+if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
     # Find required system libraries
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(ALSA REQUIRED alsa)
@@ -227,13 +236,14 @@ if(UNIX AND NOT APPLE)
         ${PULSE_INCLUDE_DIRS}
         ${X11_INCLUDE_DIR}
     )
+elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
+    find_package(OpenGL REQUIRED)
+    target_link_libraries(SpikeGLX PRIVATE ${OPENGL_LIBRARIES})
+    target_compile_options(SpikeGLX PRIVATE $<$<CONFIG:Debug>:-Og>)
 endif()
 
 # Install target
-install(TARGETS SpikeGLX
-    BUNDLE DESTINATION .
-    RUNTIME DESTINATION bin
-)
+install(TARGETS SpikeGLX DESTINATION .)
 
 # Copy for development
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
@@ -245,4 +255,40 @@ elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
 elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
     file(COPY ${XDAQ_DEVICE_MANAGER_DIR} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
     file(COPY ${XDAQ_RESOURCES_DIR} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+endif()
+
+include(deployQt)
+
+if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
+    # install(DIRECTORY ${XDAQ_DEVICE_MANAGER_DIR} DESTINATION .)
+    # install(DIRECTORY ${XDAQ_RESOURCES_DIR} DESTINATION .)
+	install(IMPORTED_RUNTIME_ARTIFACTS xdaq::xdaq_npapi
+		LIBRARY DESTINATION .
+		RUNTIME DESTINATION .
+	)
+    deployqt($<TARGET_FILE_NAME:SpikeGLX>)
+elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
+    set_target_properties(SpikeGLX PROPERTIES
+        INSTALL_RPATH "@executable_path/../Frameworks"
+    )
+	install(IMPORTED_RUNTIME_ARTIFACTS xdaq::xdaq_npapi
+		LIBRARY DESTINATION SpikeGLX.app/Contents/Frameworks
+		RUNTIME DESTINATION SpikeGLX.app/Contents/Frameworks
+	)
+    set_target_properties(SpikeGLX PROPERTIES
+        MACOSX_BUNDLE_ICON_FILE "${ICON_NAME}"
+        MACOSX_BUNDLE_GUI_IDENTIFIER "io.kontex.SpikeGLX"
+        MACOSX_BUNDLE_BUNDLE_NAME "SpikeGLX"
+        MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}"
+    )
+    deployqt("$<TARGET_FILE_NAME:SpikeGLX>.app")
+elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+	set_target_properties(SpikeGLX PROPERTIES
+		BUILD_WITH_INSTALL_RPATH TRUE
+		INSTALL_RPATH "$ORIGIN/../shared/SpikeGLX"
+	)
+	install(IMPORTED_RUNTIME_ARTIFACTS xdaq::xdaq_npapi
+		LIBRARY DESTINATION SpikeGLX
+		RUNTIME DESTINATION SpikeGLX
+	)
 endif()

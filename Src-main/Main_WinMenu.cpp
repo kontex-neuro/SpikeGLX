@@ -88,7 +88,7 @@ void Main_WinMenu::activateWindow( QWidget *w )
     if( w ) {
         QMetaObject::invokeMethod( w, "raise", Qt::AutoConnection );
         QMetaObject::invokeMethod( w, "showNormal", Qt::AutoConnection );
-        w->activateWindow();
+        QMetaObject::invokeMethod( w, "activateWindow", Qt::AutoConnection );
     }
 }
 
