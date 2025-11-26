@@ -9,7 +9,6 @@ SET(CMAKE_MODULE_PATH
 find_package(Qt6 REQUIRED COMPONENTS Core Widgets Gui OpenGLWidgets Network Svg)
 find_package(xdaq REQUIRED)
 find_package(libxdaqnp REQUIRED)
-find_package(PkgConfig REQUIRED)
 
 qt6_standard_project_setup()
 
@@ -200,8 +199,6 @@ target_link_libraries(SpikeGLX PRIVATE
 target_compile_definitions(SpikeGLX PRIVATE
     HAVE_IMEC
     OPENGL54
-    $<$<PLATFORM_ID:Windows>:HAVE_VISA>
-    $<$<PLATFORM_ID:Windows>:HAVE_NIDAQmx>
 
 	$<$<PLATFORM_ID:Linux>:OS_LINUX>
 	$<$<PLATFORM_ID:Windows>:OS_WINDOWS>
@@ -240,6 +237,9 @@ elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
     find_package(OpenGL REQUIRED)
     target_link_libraries(SpikeGLX PRIVATE ${OPENGL_LIBRARIES})
     target_compile_options(SpikeGLX PRIVATE $<$<CONFIG:Debug>:-Og>)
+elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
+    find_package(OpenGL REQUIRED)
+    target_link_libraries(SpikeGLX PRIVATE ${OPENGL_LIBRARIES} winmm)
 endif()
 
 # Install target
@@ -260,8 +260,8 @@ endif()
 include(deployQt)
 
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
-    # install(DIRECTORY ${XDAQ_DEVICE_MANAGER_DIR} DESTINATION .)
-    # install(DIRECTORY ${XDAQ_RESOURCES_DIR} DESTINATION .)
+    install(DIRECTORY ${XDAQ_DEVICE_MANAGER_DIR} DESTINATION .)
+    install(DIRECTORY ${XDAQ_RESOURCES_DIR} DESTINATION .)
 	install(IMPORTED_RUNTIME_ARTIFACTS xdaq::xdaq_npapi
 		LIBRARY DESTINATION .
 		RUNTIME DESTINATION .

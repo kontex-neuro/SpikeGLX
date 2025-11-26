@@ -48,7 +48,7 @@ NP_EXPORT NP_ErrorCode NP_APIC np_scanBS()
 #else
     static_assert(false, "Unsupported OS");
 #endif
-    return scanBS(device_manager_dir.c_str());
+    return scanBS(device_manager_dir.string().c_str());
 }
 
 }  // namespace Neuropixels

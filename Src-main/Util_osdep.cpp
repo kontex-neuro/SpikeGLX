@@ -11,7 +11,7 @@
 #include "MainApp.h"
 
 #include <QThread>
-//#include <QGLContext>
+#include <QOpenGLContext>
 
 /* ---------------------------------------------------------------- */
 /* Includes single OS --------------------------------------------- */
@@ -19,8 +19,9 @@
 
 #ifdef Q_OS_WIN
     #include <QDir>
-    #include <GL/gl.h>
     #include <windows.h>
+    #include <GL/gl.h>
+    #include <timeapi.h>
 #elif defined(Q_OS_LINUX)
     #include <GL/gl.h>
     #include <GL/glx.h>
@@ -361,7 +362,7 @@ void setOpenGLVSyncMode( bool onoff )
     Qt::HANDLE  thread = QThread::currentThreadId();
 
     wglswapfn_t wglSwapIntervalEXT =
-                (wglswapfn_t)QGLContext::currentContext()
+                (wglswapfn_t)QOpenGLContext::currentContext()
                 ->getProcAddress( "wglSwapIntervalEXT" );
 
     if( wglSwapIntervalEXT ) {

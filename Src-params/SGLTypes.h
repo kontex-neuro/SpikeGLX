@@ -4,16 +4,13 @@
 #include <qglobal.h>
 #include <limits>
 #include <vector>
+#include <cstdint>
 
 /* ---------------------------------------------------------------- */
 /* Types ---------------------------------------------------------- */
 /* ---------------------------------------------------------------- */
 
-#ifdef _MSC_VER
-#define UNSET64 _LLONG_MAX
-#else
-#define UNSET64 std::numeric_limits<qint64>::max()
-#endif
+constexpr static auto UNSET64 = std::numeric_limits<std::uint64_t>::max();
 
 
 typedef std::vector<qint16> vec_i16;
