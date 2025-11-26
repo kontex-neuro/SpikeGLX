@@ -18,7 +18,7 @@ public:
 
     virtual QString subtypeFromObj() const  {return "obx";}
     virtual QString streamFromObj() const   {return DAQ::Params::jsip2stream( jsOB, ip );}
-    virtual QString fileLblFromObj() const  {return QString("obx%1.obx").arg(ip);}
+    virtual QString fileLblFromObj() const  {return QString("obx%1.obx").arg( ip );}
 
     // --------
     // Metadata
@@ -30,6 +30,7 @@ public:
     virtual const int *cumTypCnt() const            {return obCumTypCnt;}
     virtual double origID2Gain( int /*ic*/ ) const  {return 1.0;}
     virtual void locFltRadii( int &rin, int &rout, int iflt ) const;
+    virtual uint8_t sr_mask() const                 {return -1;}
     virtual int svySettleSecs() const               {return 0;}
     virtual ShankMap* shankMap_svy( int, int )      {return 0;}
     virtual ShankMap* shankMap( bool ) const        {return 0;}

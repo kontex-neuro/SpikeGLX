@@ -37,30 +37,23 @@ SvySBTT SvySBTT::fromString( const QString &s_in )
 //
 void SvyVSBTT::fromMeta( const DataFile *df )
 {
-    QVariant    qv = df->getParam( "imSvyMaxBnk" );
-
     maxbank = 0;
-
-    if( qv.isValid() )
-        maxbank = qv.toInt();
-
+    nmaps   = 0;
     e.clear();
 
 // Any banks?
 
+    QVariant    qv = df->getParam( "imSvyMaxBnk" );
+    if( qv.isValid() )
+        maxbank = qv.toInt();
+
     qv = df->getParam( "imIsSvyRun" );
-
-    if( !qv.isValid() || !qv.toBool() ) {
-        nmaps = 0;
+    if( !qv.isValid() || !qv.toBool() )
         return;
-    }
-
-    nmaps = 1;
 
 // SBTT
 
     qv = df->getParam( "~svySBTT" );
-
     if( !qv.isValid() )
         return;
 
@@ -69,14 +62,35 @@ void SvyVSBTT::fromMeta( const DataFile *df )
                         Qt::SkipEmptyParts );
     int         n  = sl.size();
 
-// Entries
+ // See if first elem has t1 == 0 (new data)...
+ // If not, create it (old data)
 
-    nmaps += n;
+    SvySBTT E0 = SvySBTT::fromString( sl[0] );
 
-    e.reserve( n );
-
-    for( int i = 0; i < n; ++i )
-        e.push_back( SvySBTT::fromString( sl[i] ) );
+    if( E0.t1 == 0 ) {
+        // NEW: all elements are present
+        e.reserve( nmaps = n );
+        // elem-0
+        e.push_back( E0 );
+        // elem-1...
+        for( int i = 1; i < n; ++i )
+            e.push_back( SvySBTT::fromString( sl[i] ) );
+    }
+    else {
+        // OLD: prepend elem-0
+        e.reserve( nmaps = n + 1 );
+        // elem-0
+        qint64 t2 = 2 * 30000;
+        qv = df->getParam( "imSvySettleSec" );
+        if( qv.isValid() )
+            t2 = qv.toLongLong() * 30000;
+        e.push_back( SvySBTT( 0, 0, 0, t2 ) );
+        // elem-1
+        e.push_back( E0 );
+        // elem-2...
+        for( int i = 1; i < n; ++i )
+            e.push_back( SvySBTT::fromString( sl[i] ) );
+    }
 
     if( df->subtypeFromObj() == "imec.lf" ) {
 
@@ -85,8 +99,6 @@ void SvyVSBTT::fromMeta( const DataFile *df )
             e[i].t2 /= 12;
         }
     }
-
-    return;
 }
 
 /* ---------------------------------------------------------------- */
@@ -116,16 +128,25 @@ void SvyPrbRun::initRun()
 
     for( int ip = 0; ip < np; ++ip ) {
 
-        CimCfg::PrbEach &E = p.im.prbj[ip];
-        QString         err;
-        int             nB = E.roTbl->nSvyShank() * (E.svyMaxBnk + 1);
+        const CimCfg::ImProbeDat    &P = cfg->prbTab.get_iProbe( ip );
+        CimCfg::PrbEach             &E = p.im.prbj[ip];
+        QString                     err;
+        int                         nB;
+
+        nB = qMin( E.roTbl->nSvyShank(), int(P.sr_nok) ) * (E.svyMaxBnk + 1);
 
         E.sns.chanMapFile.clear();
         E.sns.uiSaveChanStr.clear();
 
         // Adopt user IMRO; set default bank
-        cfg->validImROTbl( err, E, ip );
-        E.roTbl->fillShankAndBank( 0, 0 );
+        cfg->validIMROTbl( err, E, ip, p.im.prbAll.srAtDetect );
+
+        if( E.roTbl->nSvyShank() == 1 )
+            vCurShnk[ip] = 0;
+        else
+            vCurShnk[ip] = cfg->prbTab.get_iProbe( ip ).srFirstOK();
+
+        E.roTbl->fillShankAndBank( vCurShnk[ip], 0 );
 
         cfg->validImMaps( err, E, ip );
 
@@ -133,6 +154,10 @@ void SvyPrbRun::initRun()
             err,
             p.jsip2stream( jsIM, ip ),
             p.stream_nChans( jsIM, ip ) );
+
+        vSBTT[ip] =
+        QString("(%1 0 0 %4)")
+        .arg( vCurShnk[ip] ).arg( p.im.prbAll.svySettleSec * E.srate );
 
         if( nB > nrunbank )
             nrunbank = nB;
@@ -163,26 +188,40 @@ int SvyPrbRun::msPerBnk( bool first )
 
 bool SvyPrbRun::nextBank()
 {
+    ConfigCtl   *cfg    = mainApp()->cfgCtl();
+    Run         *run    = mainApp()->getRun();
+    DAQ::Params &p      = cfg->acceptedParams;
+
+// After run starts, write the run-start (first) transition,
+// in case that's the only one
+
+    if( !irunbank ) {
+        for( int ip = 0, np = p.stream_nIM(); ip < np; ++ip )
+            run->dfSetSBTT( ip, vSBTT[ip] );
+    }
+
+// All probes done?
+
     if( ++irunbank >= nrunbank )
         return false;
 
-    ConfigCtl                   *cfg    = mainApp()->cfgCtl();
-    Run                         *run    = mainApp()->getRun();
-    DAQ::Params                 &p      = cfg->acceptedParams;
-    const CimCfg::ImProbeTable  &T      = cfg->prbTab;
+// Advance each probe
+
+    const CimCfg::ImProbeTable  &T = cfg->prbTab;
 
     for( int ip = 0, np = p.stream_nIM(); ip < np; ++ip ) {
 
-        CimCfg::PrbEach &E = p.im.prbj[ip];
-        int             &S = vCurShnk[ip],
-                        &B = vCurBank[ip];
+        const CimCfg::ImProbeDat    &P = T.get_iProbe( ip );
+        CimCfg::PrbEach             &E = p.im.prbj[ip];
+        int                         &S = vCurShnk[ip],
+                                    &B = vCurBank[ip];
 
         if( S >= E.roTbl->nSvyShank() )
-            continue;
+            continue;   // already done
 
         if( ++B > E.svyMaxBnk ) {
 
-            if( ++S >= E.roTbl->nSvyShank() ) {
+            if( (S = P.srNextOK( S )) >= E.roTbl->nSvyShank() ) {
                 run->dfHaltiq( p.stream2iq( QString("imec%1").arg( ip ) ) );
                 continue;
             }
@@ -190,17 +229,17 @@ bool SvyPrbRun::nextBank()
             B = 0;
         }
 
-        const CimCfg::ImProbeDat    &P = T.get_iProbe( ip );
-        QString                     err;
-        qint64                      t0 = run->dfGetFileStart( jsIM, ip ),
-                                    t1 = run->getQ( jsIM, ip )->endCount() - t0,
-                                    t2;
+        QString err;
+        qint64  t0 = run->dfGetFileStart( jsIM, ip ),
+                t1 = run->getQ( jsIM, ip )->endCount() - t0,
+                t2;
 
         run->grfHardPause( true );
         run->grfWaitPaused();
 
         E.roTbl->fillShankAndBank( S, B );
-        E.roTbl->selectSites( P.slot, P.port, P.dock, true );
+        E.roTbl->selectSites( P.slot, P.port, P.dock,
+                    true, !p.im.prbAll.srAtDetect || P.srDoCheck() );
         E.sns.chanMapFile.clear();
         cfg->validImMaps( err, E, ip );
         run->grfUpdateProbe( ip, true, true );
@@ -213,7 +252,7 @@ bool SvyPrbRun::nextBank()
         t2 = run->getQ( jsIM, ip )->endCount() + qint64(1.5 * E.srate) - t0;
 
         vSBTT[ip] +=
-            QString("(%1 %2 %3 %4)").arg( S ).arg( B ).arg( t1 ).arg( t2 );
+        QString("(%1 %2 %3 %4)").arg( S ).arg( B ).arg( t1 ).arg( t2 );
 
         run->dfSetSBTT( ip, vSBTT[ip] );
     }

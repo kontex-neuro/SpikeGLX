@@ -11,6 +11,8 @@
 #include "ColorTTLCtl.h"
 #include "Subset.h"
 #include "SignalBlocker.h"
+#include "IMEC/NeuropixAPI.h"
+using namespace Neuropixels;
 
 #include <QMessageBox>
 #include <QComboBox>
@@ -232,7 +234,7 @@ void ConfigCtl::graphSetsImroFile( const QString &file, int ip )
 
     E.imroFile = file;
 
-    if( validImROTbl( err, E, ip ) ) {
+    if( validIMROTbl( err, E, ip, p.im.prbAll.srAtDetect ) ) {
 
         if( !E.roTbl->isConnectedSame( T_old ) )
             validImMaps( err, E, ip );
@@ -655,7 +657,7 @@ void ConfigCtl::streamCB_fillConfig( QComboBox *CB ) const
 }
 
 
-bool ConfigCtl::validImROTbl( QString &err, CimCfg::PrbEach &E, int ip ) const
+bool ConfigCtl::validIMROTbl( QString &err, CimCfg::PrbEach &E, int ip, bool srCheck ) const
 {
 // Pretties ini file, even if not using device
     if( E.imroFile.contains( "*" ) )
@@ -665,23 +667,91 @@ bool ConfigCtl::validImROTbl( QString &err, CimCfg::PrbEach &E, int ip ) const
         return true;
 
     const CimCfg::ImProbeDat    &P = prbTab.get_iProbe( ip );
+    QString                     msg;
+
+// Fresh imro object
 
     if( E.roTbl )
         delete E.roTbl;
 
-    E.roTbl = IMROTbl::alloc( P.pn );
+    IMROTbl *R = E.roTbl = IMROTbl::alloc( P.pn );
 
-    if( E.imroFile.isEmpty() ) {
+// Set intended imro file
 
-        E.roTbl->fillDefault();
+    if( E.imroFile.isEmpty() )
+        R->fillDefault();
+    else if( !R->loadFile( msg, E.imroFile ) ) {
+        err = QString("Imec%1 ImroFile: %2.").arg( ip ).arg( msg );
+        return false;
+    }
+
+// Check against SR
+
+    if( !srCheck )
+        return true;
+    if( P.sr_nok >= P.sr_nshk )
+        return true;
+    if( !P.sr_nok ) {
+        err = QString("Imec%1 All shanks broken.").arg( ip );
+        return false;
+    }
+    else if( R->apiFetchType() == t_fetch_qb ) {
+        QString s;
+        for( int is = 0; is < P.sr_nshk; ++is ) {
+            if( P.sr_mask & (1 << is) )
+                s += QString(" %1").arg( is );
+        }
+        Warning() << QString("Imec%1: Quadbase with good shanks { %2 }.")
+                        .arg( ip ).arg( s.trimmed() );
+        Warning() << "You can run, but should ignore data from bad shanks.";
+        Warning() << "You can use the IMRO editor 'selective save' feature to"
+        " save channels exclusively from good shanks.";
         return true;
     }
 
-    QString msg;
+// Electrodes
 
-    if( !E.roTbl->loadFile( msg, E.imroFile ) ) {
+    ShankMap    S;
+    QSet<int>   bad;
+    R->toShankMap_hwr( S );
 
-        err = QString("Imec%1 ImroFile: %2.").arg( ip ).arg( msg );
+    for( int ie = 0, ne = S.e.size(); ie < ne; ++ie ) {
+        int shk = S.e[ie].s;
+        if( !(P.sr_mask & (1 << shk)) )
+            bad.insert( shk );
+    }
+
+    if( !bad.isEmpty() ) {
+        QString s;
+        foreach( int shk, bad )
+            s += QString(" %1").arg( shk );
+        err = QString("Imec%1: Sites selected on broken shank-id { %2 }.")
+                .arg( ip ).arg( s.trimmed() );
+        return false;
+    }
+
+// Refs
+
+    uint8_t tips = 0;
+
+    for( int ic = 0, nc = R->nAP(); ic < nc; ++ic ) {
+
+        int shank, bank, type = R->refTypeAndFields( shank, bank, ic );
+
+        if( type == TIP_REF || type == INT_REF )
+            tips |= (1 << shank);
+    }
+
+    if( tips && !(tips & P.sr_mask) ) {
+        QString s;
+        for( int is = 0; is < P.sr_nshk; ++is ) {
+            if( P.sr_mask & (1 << is) )
+                s += QString(" %1").arg( is );
+        }
+        err = QString(
+        "Imec%1: Uses tip (or on-shank) referencing...\r\n"
+        "but that must include one of shank-id { %2 }.")
+            .arg( ip ).arg( s.trimmed() );
         return false;
     }
 
@@ -2825,7 +2895,7 @@ bool ConfigCtl::shankParamsToQ( QString &err, DAQ::Params &q, int ip ) const
 
     CimCfg::PrbEach &E = q.im.prbj[ip];
 
-    if( !validImROTbl( err, E, ip ) )
+    if( !validIMROTbl( err, E, ip, q.im.prbAll.srAtDetect ) )
         return false;
 
     if( !validImStdbyBits( err, E, ip ) )
@@ -2886,7 +2956,7 @@ bool ConfigCtl::valid( QString &err, QWidget *parent, int iprb )
 
         CimCfg::PrbEach &E = q.im.prbj[ip];
 
-        if( !validImROTbl( err, E, ip ) )
+        if( !validIMROTbl( err, E, ip, q.im.prbAll.srAtDetect ) )
             return false;
 
         if( !validImStdbyBits( err, E, ip ) )

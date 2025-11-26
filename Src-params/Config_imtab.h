@@ -27,7 +27,8 @@ private:
     QVector<CimCfg::PrbEach>        each;
     QString                         imro_cancelName;
     int                             imro_ip;
-    bool                            lfPairChk;
+    bool                            srAtDetect, // hidden 'control'
+                                    lfPairChk;
 
 public:
     Config_imtab( ConfigCtl *cfg, QWidget *tab );
@@ -69,6 +70,7 @@ private:
     void toTbl( int ip );
     void fromTbl( int ip );
     void copy( int idst, int isrc );
+    bool checkImro( CimCfg::PrbEach &E, int ip );
     int curProbe();
 };
 

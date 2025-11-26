@@ -63,6 +63,18 @@ void DataFileIMAP::locFltRadii( int &rin, int &rout, int iflt ) const
 }
 
 
+uint8_t DataFileIMAP::sr_mask() const
+{
+    KVParams::const_iterator    it;
+    uint8_t                     mask = -1;
+
+    if( (it = kvp.find( "imDatPrb_sr_mask" )) != kvp.end() )
+        mask = it.value().toUInt();
+
+    return mask;
+}
+
+
 int DataFileIMAP::svySettleSecs() const
 {
     KVParams::const_iterator    it;
@@ -205,6 +217,7 @@ void DataFileIMAP::subclassStoreMetaData( const DAQ::Params &p )
     kvp["typeThis"]         = "imec";
     kvp["imSampRate"]       = sRate;
     kvp["imCalibrated"]     = (p.im.prbAll.calPolicy < 2) && (P.cal == 1);
+    kvp["imSRAtDetect"]     = p.im.prbAll.srAtDetect;
     kvp["imLowLatency"]     = p.im.prbAll.lowLatency;
     kvp["imTrgSource"]      = p.im.prbAll.trgSource;
     kvp["imTrgRising"]      = p.im.prbAll.trgRising;
@@ -251,6 +264,8 @@ void DataFileIMAP::subclassStoreMetaData( const DAQ::Params &p )
     kvp["imDatPrb_port"]    = P.port;
     kvp["imDatPrb_slot"]    = P.slot;
     kvp["imDatPrb_sn"]      = P.sn;
+    kvp["imDatPrb_sr_nok"]  = P.sr_nok;
+    kvp["imDatPrb_sr_mask"] = P.sr_mask;
     kvp["imDatPrb_tech"]    = IMROTbl::strTech( P.prbtech );
     kvp["imDatPrb_type"]    = E.roTbl->type;
 

@@ -28,7 +28,7 @@ struct IMRODesc_T21base
     bool operator==( const IMRODesc_T21base &rhs ) const
         {return mbank==rhs.mbank && refid==rhs.refid;}
     QString toString( int chn ) const;
-    bool fromString( QString *msg, const QString &s );
+    int fromString( QString *msg, const QString &s );
 };
 
 
@@ -105,7 +105,12 @@ struct IMROTbl_T21base : public IMROTbl
 
 // Hardware
 
-    virtual int selectSites( int slot, int port, int dock, bool write ) const;
+    virtual int selectSites(
+        int     slot,
+        int     port,
+        int     dock,
+        bool    write,
+        bool    check ) const;
     virtual int selectGains( int, int, int ) const  {return 0;}
     virtual int selectAPFlts( int, int, int ) const {return 0;}
 

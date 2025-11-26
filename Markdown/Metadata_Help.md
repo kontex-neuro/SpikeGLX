@@ -604,12 +604,19 @@ V = i * Vmax / Imax / gain.
 
 * Imax = `imMaxInt`
 * Vmax = `imAiRangeMax`
+* gain = `imChan0apGain` 
 
-For type 21 or type 24 imec probes:
+For older metadata that does not have the imChan0apGain item...
+
+Type 21 and type 24 probes:
 
 * gain = 80 (fixed).
 
-For type 0 or other probes with selectable gain:
+Type 2003 and type 2013 probes:
+
+* gain = 100 (fixed).
+
+Type 0 and other probes with selectable gain:
 
 * gain = imroTbl gain entry for AP or LF type.
 
@@ -1143,13 +1150,19 @@ its own shank (with tips pointing down, shank-0 is left-most).
 >Note: There are electrode entries only for saved channels.
 
 ```
-~svySBTT=(0 1 312963 360017)(0 2 644811 692174)
+~svySBTT=(0 0 0 60000)(0 1 312963 360017)(0 2 644811 692174)
 ```
 
-The list of survey transitions:
+The list of survey transition events:
 (shank, bank, start-time(samples), end-time(samples)).
 
 The end-times indicate when the amplifiers have settled (more or less).
+
+> As of version 20250930, an additional element is prepended representing
+run startup. That element, when present, represents: the starting shank and
+bank, start-time=0, and end-time=IM setup tab's settle value. This is done
+as part of broken shank handling wherein the starting shank could differ
+from zero.
 
 --------
 

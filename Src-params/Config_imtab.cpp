@@ -73,6 +73,8 @@ void Config_imtab::toGUI( const DAQ::Params &p )
 // All
 // ---
 
+    srAtDetect = p.im.prbAll.srAtDetect;    // edit from remote SDK
+
     imTabUI->calCB->setCurrentIndex( p.im.prbAll.calPolicy );
     imTabUI->lowLatChk->setChecked( p.im.prbAll.lowLatency );
     imTabUI->trgSrcCB->setCurrentIndex( p.im.prbAll.trgSource );
@@ -128,6 +130,8 @@ void Config_imtab::toGUI( const DAQ::Params &p )
 
 void Config_imtab::fromGUI( DAQ::Params &q )
 {
+    q.im.prbAll.srAtDetect      = srAtDetect;    // edit from remote SDK
+
     q.im.prbAll.qf_secsStr      = imTabUI->qfSecsCB->currentText();
     q.im.prbAll.qf_loCutStr     = imTabUI->qfLoCB->currentText();
     q.im.prbAll.qf_hiCutStr     = imTabUI->qfHiCB->currentText();
@@ -407,29 +411,17 @@ void Config_imtab::editIMRO()
 {
     int             ip  = curProbe();
     CimCfg::PrbEach &E  = each[ip];
-    QString         err;
 
 // Validate IMRO
 
-    fromTbl( ip );
-    imro_cancelName.clear();
-    imro_ip = ip;
-
-    if( !cfg->validImROTbl( err, E, ip ) && !err.isEmpty() ) {
-
-        err += "\r\n\r\nReverting to default imro.";
-        QMessageBox::critical( cfg->dialog(), "IMRO File Error", err );
-
-        imro_cancelName = E.imroFile;
-        E.imroFile.clear();
-        cfg->validImROTbl( err, E, ip );
-    }
+    checkImro( E, ip );
 
 // -------------
 // Launch editor
 // -------------
 
-    ShankCtlBase*   shankCtl = new ShankCtlBase( cfg->dialog(), true );
+    ShankCtlBase*   shankCtl = new ShankCtlBase(
+        cfg->dialog(), cfg->prbTab.get_iProbe( ip ).sr_mask, true );
     ConnectUI( shankCtl, SIGNAL(runSaveChansDlg(QString)), this, SLOT(editSave(QString)) );
     ConnectUI( shankCtl, SIGNAL(modal_done(ShankCtlBase*,QString,bool)), this, SLOT(imro_done(ShankCtlBase*,QString,bool)) );
     shankCtl->baseInit( E.roTbl, false );
@@ -442,23 +434,11 @@ void Config_imtab::editChan()
 {
     int             ip = curProbe();
     CimCfg::PrbEach &E = each[ip];
-    QString         err;
 
 // Validate IMRO
 
-    fromTbl( ip );
-    imro_cancelName.clear();
-    imro_ip = ip;
-
-    if( !cfg->validImROTbl( err, E, ip ) && !err.isEmpty() ) {
-
-        err += "\r\n\r\nReverting to default imro.";
-        QMessageBox::critical( cfg->dialog(), "IMRO File Error", err );
-
-        imro_cancelName = E.imroFile;
-        E.imroFile.clear();
-        cfg->validImROTbl( err, E, ip );
-    }
+    if( !checkImro( E, ip ) )
+        return;
 
 // ---------------------------------------
 // Calculate channel usage from current UI
@@ -491,25 +471,14 @@ void Config_imtab::editSave( QString sInit )
     int             ip = curProbe();
     CimCfg::PrbEach &E = each[ip];
     SaveChansCtl    SV( cfg->dialog(), E, ip );
-    QString         err, saveStr = sInit;
+    QString         saveStr = sInit;
 
 // Validate IMRO
 
     if( sInit.isEmpty() ) {
 
-        fromTbl( ip );
-        imro_cancelName.clear();
-        imro_ip = ip;
-
-        if( !cfg->validImROTbl( err, E, ip ) && !err.isEmpty() ) {
-
-            err += "\r\n\r\nReverting to default imro.";
-            QMessageBox::critical( cfg->dialog(), "IMRO File Error", err );
-
-            imro_cancelName = E.imroFile;
-            E.imroFile.clear();
-            cfg->validImROTbl( err, E, ip );
-        }
+        if( !checkImro( E, ip ) )
+            return;
     }
 
 // Save dialog
@@ -1019,6 +988,36 @@ void Config_imtab::copy( int idst, int isrc )
             }
         }
     }
+}
+
+
+bool Config_imtab::checkImro( CimCfg::PrbEach &E, int ip )
+{
+    QString err, errSR;
+
+    fromTbl( ip );
+    imro_cancelName = E.imroFile;
+    imro_ip         = ip;
+
+// Check file issue alone
+
+    if( !cfg->validIMROTbl( err, E, ip, false ) ) {
+
+        err += "\r\n>> Reverting to default imro.";
+
+        E.imroFile.clear();
+        cfg->validIMROTbl( err, E, ip, false );
+    }
+
+// Check against SR
+
+    if( srAtDetect && !cfg->validIMROTbl( errSR, E, ip, true ) )
+        err += QString("%1%2").arg( err.isEmpty() ? "" : "\r\n\r\n" ).arg( errSR );
+
+    if( !err.isEmpty() )
+        QMessageBox::critical( cfg->dialog(), "IMRO File Error", err );
+
+    return err.isEmpty();
 }
 
 
