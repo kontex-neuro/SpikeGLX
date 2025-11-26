@@ -887,7 +887,7 @@ void ImAcqStream::checkErrs_EPack( electrodePacket* E, int nE )
 
 // Cross-fetch
 
-    quint32 tsfirst = E[0].timestamp[0];
+    auto tsfirst = E[0].timestamp[0];
     int     nmiss   = 0;
     quint16 stfirst = E[0].Status[0];
 
@@ -895,8 +895,8 @@ void ImAcqStream::checkErrs_EPack( electrodePacket* E, int nE )
 
     if( !tStampLastFetch || tStampLastFetch >= tsfirst )
         ;   // init or rollover
-    else if( tsfirst - tStampLastFetch > 4 ) {
-        vtStampMiss[0] = 3 * (tsfirst - tStampLastFetch) / 10;
+    else if( tsfirst - tStampLastFetch > 4 * 15) {
+        vtStampMiss[0] = 3 * (tsfirst - tStampLastFetch) / 10 / 10;
         vstatusMiss[0] = STATBRIDGE( statusLastFetch, stfirst );
         nmiss         += vtStampMiss[0];
 #ifdef TSTAMPCHECKS
@@ -915,15 +915,15 @@ void ImAcqStream::checkErrs_EPack( electrodePacket* E, int nE )
 
         int     ie = it / TPNTPERFETCH,
                 is = it - ie * TPNTPERFETCH;
-        quint32 tsnext = E[ie].timestamp[is];
+        const auto tsnext = E[ie].timestamp[is];
         quint16 stnext = E[ie].Status[is];
 
         vtStampMiss[it] = 0;
 
         if( tsfirst >= tsnext )
             ;   // init or rollover
-        else if( tsnext - tsfirst > 4 ) {
-            vtStampMiss[it] = 3 * (tsnext - tsfirst) / 10;
+        else if( tsnext - tsfirst > 4 * 15) {
+            vtStampMiss[it] = 3 * (tsnext - tsfirst) / 10 / 10;
             vstatusMiss[it] = STATBRIDGE( stfirst, stnext );
             nmiss          += vtStampMiss[it];
         }
@@ -975,15 +975,15 @@ void ImAcqStream::checkErrs_PInfo( PacketInfo* H, int nT, int shank )
 
         // Cross-fetch
 
-        quint32 tsfirst = H[0].Timestamp;
+        auto tsfirst = H[0].Timestamp;
         int     nmiss   = 0;
 
         vtStampMiss[0] = 0;
 
         if( !tStampLastFetch || tStampLastFetch >= tsfirst )
             ;   // init or rollover
-        else if( tsfirst - tStampLastFetch > 4 ) {
-            vtStampMiss[0] = 3 * (tsfirst - tStampLastFetch) / 10;
+        else if( tsfirst - tStampLastFetch > 4 * 15) {
+            vtStampMiss[0] = 3 * (tsfirst - tStampLastFetch) / 10 / 10;
             vstatusMiss[0] = STATBRIDGE( statusLastFetch, H[0].Status );
             nmiss         += vtStampMiss[0];
 #ifdef TSTAMPCHECKS
@@ -1001,14 +1001,14 @@ void ImAcqStream::checkErrs_PInfo( PacketInfo* H, int nT, int shank )
 
         for( int it = 1; it < nT; ++it ) {
 
-            quint32 tsnext = H[it].Timestamp;
+            auto tsnext = H[it].Timestamp;
 
             vtStampMiss[it] = 0;
 
             if( tsfirst >= tsnext )
                 ;   // init or rollover
-            else if( tsnext - tsfirst > 4 ) {
-                vtStampMiss[it] = 3 * (tsnext - tsfirst) / 10;
+            else if( tsnext - tsfirst > 4 * 15) {
+                vtStampMiss[it] = 3 * (tsnext - tsfirst) / 10 / 10;
                 vstatusMiss[it] = STATBRIDGE( H[it-1].Status, H[it].Status );
                 nmiss          += vtStampMiss[it];
             }

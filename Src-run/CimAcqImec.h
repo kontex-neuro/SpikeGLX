@@ -329,11 +329,11 @@ struct ImAcqStream {
     ImAcqQFlt   *QFlt;
     QVector<uint>           vXA;
     QMap<quint64,int>       mtStampMiss;
-    std::vector<quint32>    vtStampMiss;
+    std::vector<std::uint64_t>    vtStampMiss;
     std::vector<quint16>    vstatusMiss;
     qbfifo      sqb;
-    quint32     tStampLastFetch,
-                errCOUNT[4],
+    std::uint64_t tStampLastFetch;
+    quint32     errCOUNT[4],
                 errSERDES[4],
                 errLOCK[4],
                 errPOP[4],
