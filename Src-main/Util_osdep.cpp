@@ -35,7 +35,6 @@
     #include <time.h>
     #include <unistd.h>
 #elif defined(Q_OS_MACOS)
-    #include <AGL/agl.h>
     #include <OpenGL/gl.h>
     #include <CoreServices/CoreServices.h>
 #endif
@@ -428,40 +427,7 @@ void setOpenGLVSyncMode( bool onoff )
 
 void setOpenGLVSyncMode( bool onoff )
 {
-    static Qt::HANDLE   lastThread = 0;    // limit report verbosity
-
-    Qt::HANDLE  thread = QThread::currentThreadId();
-
-    GLint       tmp = (onoff ? 1 : 0);
-    AGLContext  ctx = aglGetCurrentContext();
-
-    if( aglEnable( ctx, AGL_SWAP_INTERVAL ) == GL_FALSE ) {
-
-        if( thread != lastThread ) {
-            Warning()
-                << "OpenGL VSync mode could not be set because"
-                " aglEnable(AGL_SWAP_INTERVAL) returned false.";
-            thread = lastThread;
-        }
-    }
-    else {
-        if( aglSetInteger( ctx, AGL_SWAP_INTERVAL, &tmp ) == GL_FALSE ) {
-
-            if( thread != lastThread ) {
-                Warning()
-                    << "OpenGL VSync mode could not be set because"
-                    " aglSetInteger returned false.";
-                thread = lastThread;
-            }
-        }
-        else if( thread != lastThread ) {
-            Log()
-                << "OpenGL VSync mode "
-                << (onoff ? "enabled" : "disabled")
-                << " using aglSetInteger().";
-            thread = lastThread;
-        }
-    }
+    Q_UNUSED( onoff );
 }
 
 #else /* !Q_OS_WIN && !Q_OS_LINUX && !Q_OS_MACOS */
