@@ -6,6 +6,8 @@ SET(CMAKE_MODULE_PATH
     ${CMAKE_MODULE_PATH}
 )
 
+include(GNUInstallDirs)
+
 find_package(Qt6 REQUIRED COMPONENTS Core Widgets Gui OpenGLWidgets Network Svg)
 find_package(xdaq REQUIRED)
 find_package(libxdaqnp REQUIRED)
@@ -242,9 +244,6 @@ elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
     target_link_libraries(SpikeGLX PRIVATE ${OPENGL_LIBRARIES} winmm)
 endif()
 
-# Install target
-install(TARGETS SpikeGLX DESTINATION .)
-
 # Copy for development
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
     file(COPY ${XDAQ_DEVICE_MANAGER_DIR} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
@@ -260,6 +259,7 @@ endif()
 include(deployQt)
 
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
+    install(TARGETS SpikeGLX DESTINATION .)
     install(DIRECTORY ${XDAQ_DEVICE_MANAGER_DIR} DESTINATION .)
     install(DIRECTORY ${XDAQ_RESOURCES_DIR} DESTINATION .)
 	install(IMPORTED_RUNTIME_ARTIFACTS xdaq::xdaq_npapi
@@ -268,6 +268,7 @@ if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
 	)
     deployqt($<TARGET_FILE_NAME:SpikeGLX>)
 elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
+    install(TARGETS SpikeGLX DESTINATION .)
     set_target_properties(SpikeGLX PROPERTIES
         INSTALL_RPATH "@executable_path/../Frameworks"
     )
@@ -283,12 +284,15 @@ elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
     )
     deployqt("$<TARGET_FILE_NAME:SpikeGLX>.app")
 elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+    install(TARGETS SpikeGLX DESTINATION ${CMAKE_INSTALL_BINDIR})
+    install(DIRECTORY ${XDAQ_DEVICE_MANAGER_DIR} DESTINATION ${CMAKE_INSTALL_LIBDIR}/SpikeGLX)
+    install(DIRECTORY ${XDAQ_RESOURCES_DIR} DESTINATION ${CMAKE_INSTALL_LIBDIR}/SpikeGLX)
 	set_target_properties(SpikeGLX PROPERTIES
 		BUILD_WITH_INSTALL_RPATH TRUE
-		INSTALL_RPATH "$ORIGIN/../shared/SpikeGLX"
+		INSTALL_RPATH "$ORIGIN/../lib/SpikeGLX"
 	)
 	install(IMPORTED_RUNTIME_ARTIFACTS xdaq::xdaq_npapi
-		LIBRARY DESTINATION SpikeGLX
-		RUNTIME DESTINATION SpikeGLX
+		LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/SpikeGLX
+		RUNTIME DESTINATION ${CMAKE_INSTALL_LIBDIR}/SpikeGLX
 	)
 endif()
