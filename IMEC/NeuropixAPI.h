@@ -13,10 +13,6 @@
 #include <NeuropixAPI.hpp>
 #define XDAQ_API
 
-namespace Neuropixels{
-	NP_EXPORT NP_ErrorCode NP_APIC np_scanBS();
-}
-
 #ifndef XDAQ_API
 #include <stdint.h>
 #include <stddef.h>

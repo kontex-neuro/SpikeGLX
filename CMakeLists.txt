@@ -160,7 +160,6 @@ qt_add_executable(SpikeGLX MACOSX_BUNDLE
     ${SAMPLERATE_HEADERS}
     ${UI_FORMS}
     ${QRC_SOURCES}
-    IMEC/xdaq_npapi.cc
 )
 
 target_compile_features(SpikeGLX PRIVATE cxx_std_23)
@@ -196,6 +195,7 @@ target_link_libraries(SpikeGLX PRIVATE
     Qt6::Network
     Qt6::Svg
     xdaq::xdaq_npapi
+    spdlog::spdlog
 )
 
 target_compile_definitions(SpikeGLX PRIVATE
@@ -260,41 +260,40 @@ include(deployQt)
 
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
     install(TARGETS SpikeGLX DESTINATION .)
-    install(DIRECTORY ${XDAQ_DEVICE_MANAGER_DIR} DESTINATION .)
-    install(DIRECTORY ${XDAQ_RESOURCES_DIR} DESTINATION .)
-	install(IMPORTED_RUNTIME_ARTIFACTS xdaq::xdaq_npapi
-		LIBRARY DESTINATION .
-		RUNTIME DESTINATION .
-	)
+    libxdaqnp_install_runtime(
+        PLUGIN_DEST   .
+        SHARED_DEST   .
+        MANAGERS_DEST device_managers
+    )
     deployqt($<TARGET_FILE_NAME:SpikeGLX>)
 elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
     install(TARGETS SpikeGLX DESTINATION .)
     set_target_properties(SpikeGLX PROPERTIES
         INSTALL_RPATH "@executable_path/../Frameworks"
     )
-	install(IMPORTED_RUNTIME_ARTIFACTS xdaq::xdaq_npapi
-		LIBRARY DESTINATION SpikeGLX.app/Contents/Frameworks
-		RUNTIME DESTINATION SpikeGLX.app/Contents/Frameworks
-	)
     set_target_properties(SpikeGLX PROPERTIES
         MACOSX_BUNDLE_ICON_FILE "${ICON_NAME}"
         MACOSX_BUNDLE_GUI_IDENTIFIER "io.kontex.SpikeGLX"
         MACOSX_BUNDLE_BUNDLE_NAME "SpikeGLX"
         MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}"
     )
+    libxdaqnp_install_runtime(
+        PLUGIN_DEST   SpikeGLX.app/Contents/Frameworks
+        SHARED_DEST   SpikeGLX.app/Contents/Frameworks
+        MANAGERS_DEST SpikeGLX.app/Contents/Frameworks/device_managers
+    )
     deployqt("$<TARGET_FILE_NAME:SpikeGLX>.app")
 elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
     install(TARGETS SpikeGLX DESTINATION ${CMAKE_INSTALL_BINDIR})
-    install(DIRECTORY ${XDAQ_DEVICE_MANAGER_DIR} DESTINATION ${CMAKE_INSTALL_LIBDIR}/SpikeGLX)
-    install(DIRECTORY ${XDAQ_RESOURCES_DIR} DESTINATION ${CMAKE_INSTALL_LIBDIR}/SpikeGLX)
-	set_target_properties(SpikeGLX PROPERTIES
-		BUILD_WITH_INSTALL_RPATH TRUE
-		INSTALL_RPATH "$ORIGIN/../lib/SpikeGLX"
-	)
-	install(IMPORTED_RUNTIME_ARTIFACTS xdaq::xdaq_npapi
-		LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/SpikeGLX
-		RUNTIME DESTINATION ${CMAKE_INSTALL_LIBDIR}/SpikeGLX
-	)
+    set_target_properties(SpikeGLX PROPERTIES
+        BUILD_WITH_INSTALL_RPATH TRUE
+        INSTALL_RPATH "$ORIGIN/../lib/SpikeGLX"
+    )
+    libxdaqnp_install_runtime(
+        PLUGIN_DEST   ${CMAKE_INSTALL_LIBDIR}/SpikeGLX
+        SHARED_DEST   ${CMAKE_INSTALL_LIBDIR}/SpikeGLX
+        MANAGERS_DEST ${CMAKE_INSTALL_LIBDIR}/SpikeGLX/device_managers
+    )
 endif()
 
 # Packaging
