@@ -21,9 +21,6 @@ jobs:
                     - os: macos-15
                       arch: x64
                       base_name: mac-x86_64
-                    - os: ubuntu-22.04
-                      arch: x64
-                      base_name: linux-x86_64
 
         runs-on: ${{ matrix.os }}
 
@@ -41,25 +38,10 @@ jobs:
                   echo "CC=$(brew --prefix llvm@18)/bin/clang" >> $GITHUB_ENV
                   echo "CXX=$(brew --prefix llvm@18)/bin/clang++" >> $GITHUB_ENV
 
-            - name: Setup Compiler and dependencies (Ubuntu 22)
-              if: matrix.os == 'ubuntu-22.04'
-              run: |
-                sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
-                sudo apt-get update -y
-                echo "CC=gcc-13" >> $GITHUB_ENV
-                echo "CXX=g++-13" >> $GITHUB_ENV
-
-            - name: Cache gcc and dependencies packages (Ubuntu 22)
-              uses: awalsh128/cache-apt-pkgs-action@latest
-              if: matrix.os == 'ubuntu-22.04'
-              with:
-                packages: gcc-13 g++-13 patchelf libasound2-dev mesa-common-dev libglu1-mesa-dev
-                version: 1
-
             - name: Install Qt
               uses: jurplel/install-qt-action@v4
               with:
-                version: '6.9.*'
+                version: '6.10.*'
                 cache: true
 
             - name: Checkout code
@@ -128,3 +110,58 @@ jobs:
               with:
                   name: ${{ matrix.base_name }}
                   path: ${{ matrix.base_name }}.zip
+
+    build-linux:
+        runs-on: ubuntu-22.04
+        container: ghcr.io/kontex-neuro/ubuntu22-gcc13:latest
+        env:
+            OS_NAME: ubuntu-22.04
+            ARCH_NAME: x64
+            BASE_NAME: linux-x86_64
+
+        steps:
+            - name: Install extra dependencies
+              run: |
+                  apt-get update -y
+                  apt-get install -y libasound2-dev mesa-common-dev libglu1-mesa-dev
+                  rm -rf /var/lib/apt/lists/*
+
+            - name: Conan cache
+              uses: actions/cache@v5
+              with:
+                  path: ~/.conan2
+                  key: conan-ubuntu-22.04-x64
+
+            - name: Install Qt
+              uses: jurplel/install-qt-action@v4
+              with:
+                version: '6.11.*'
+                cache: true
+
+            - name: Checkout code
+              uses: actions/checkout@v6
+
+            - name: Clone submodules and setup Conan
+              shell: bash
+              run: |
+                  conan config install .github/conan_profiles/${{ env.OS_NAME }}-${{ env.ARCH_NAME }} -tf profiles
+                  git clone https://github.com/kontex-neuro/kontex-conan.git kontex-conan
+                  conan remote add --force kontex-neuro ./kontex-conan
+
+            - name: Build SpikeGLX
+              shell: bash
+              run: |
+                  conan install . --build=missing --profile:all ${{ env.OS_NAME }}-${{ env.ARCH_NAME }} -s build_type=Release
+                  cmake -S . -B build/Release --preset conan-release -DCMAKE_INSTALL_PREFIX=install
+                  cmake --build build/Release --preset conan-release --target install
+
+            - name: zip
+              shell: bash
+              run: |
+                  7z a ${{ env.BASE_NAME }}.zip ./install/*
+
+            - name: Upload artifact
+              uses: actions/upload-artifact@v7
+              with:
+                  name: ${{ env.BASE_NAME }}
+                  path: ${{ env.BASE_NAME }}.zip
