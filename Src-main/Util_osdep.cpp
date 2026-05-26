@@ -43,6 +43,10 @@
 /* Includes multi OS ---------------------------------------------- */
 /* ---------------------------------------------------------------- */
 
+#if !defined(Q_OS_WIN)
+    #include <sys/statvfs.h>
+#endif
+
 #if !defined(Q_OS_WIN) && !defined(Q_OS_LINUX)
     #include <QTime>
 #endif
@@ -115,22 +119,23 @@ quint64 availableDiskSpace( int iDataDir )
         return availableBytes;
     }
 
-// Failing any actual query, return either a show-stopping zero
-// or a modest number, such as 4GB.
-
-    return quint64(4096) * 1024 * 1024;
+    return 0;
 }
 
-#else
+#elif defined(Q_OS_LINUX) || defined(Q_OS_MACOS)
 
 quint64 availableDiskSpace( int iDataDir )
 {
-// Failing any actual query, return either a show-stopping zero
-// or a modest number, such as 4GB.
+    struct statvfs  buf;
 
-    return quint64(4096) * 1024 * 1024;
+    if( !statvfs( mainApp()->dataDir( iDataDir ).toUtf8().constData(), &buf ) )
+        return quint64(buf.f_bavail) * buf.f_frsize;
+
+    return 0;
 }
 
+#else
+    static_assert( false, "availableDiskSpace: unsupported OS" );
 #endif
 
 /* ---------------------------------------------------------------- */
