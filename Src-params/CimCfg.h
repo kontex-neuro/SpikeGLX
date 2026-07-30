@@ -16,8 +16,8 @@ class QTableWidget;
 /* Types ---------------------------------------------------------- */
 /* ---------------------------------------------------------------- */
 
-#define imOBX_SRATE 30303.0
-#define imOBX_NCHN  12
+#define imOBX_SRATE 30000.0
+#define imOBX_NCHN  8
 
 // Base class for IMEC configuration
 //
@@ -449,8 +449,8 @@ public:
         SnsChansObx     sns;
 
         ObxEach()
-        :   range(-5,5), srate(imOBX_SRATE),
-            uiXAStr("0:11"), isXD(true) {}
+        :   range(-10,10), srate(imOBX_SRATE),
+            uiXAStr("0:7"), isXD(true) {}
 
         void deriveChanCounts();
 

@@ -16,7 +16,7 @@
 
 // TPNTPERFETCH reflects the AP/LF sample rate ratio.
 #define TPNTPERFETCH    12
-#define OBX_N_ACQ       24
+#define OBX_N_ACQ       8
 #define AVEE            5
 #define MAXE            24
 
@@ -1809,10 +1809,7 @@ next_j:;
 
         if( S.nXD ) {
 
-            int XD = 0;
-
-            for( int iline = 0; iline < imOBX_NCHN; ++iline )
-                XD += src[imOBX_NCHN + iline] << iline;
+            int XD = H[it].Status >> 6;
 
             *dst++ = XD;
         }
