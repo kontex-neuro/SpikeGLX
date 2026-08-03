@@ -137,6 +137,7 @@ jobs:
               with:
                 version: '6.11.*'
                 cache: true
+                install-deps: 'nosudo'
 
             - name: Checkout code
               uses: actions/checkout@v6
