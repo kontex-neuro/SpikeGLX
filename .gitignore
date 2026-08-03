@@ -63,5 +63,9 @@ desktop.ini
 
 # Other
 *.bin
-
+.python-version
+install/
+kontex-conan/
+pyproject.toml
+uv.lock
 
