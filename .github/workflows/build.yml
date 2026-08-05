@@ -4,8 +4,8 @@ on:
     workflow_dispatch:
     workflow_call:
     push:
-      branches:
-        - master
+        branches:
+            - master
 
 jobs:
     build:
@@ -41,8 +41,8 @@ jobs:
             - name: Install Qt
               uses: jurplel/install-qt-action@v4
               with:
-                version: '6.10.*'
-                cache: true
+                  version: "6.10.*"
+                  cache: true
 
             - name: Checkout code
               uses: actions/checkout@v6
@@ -99,7 +99,7 @@ jobs:
                     -exec xcrun notarytool submit {} --keychain-profile "kontex" --wait \; \
                     -exec xcrun stapler staple {} \;
                   cp build/Release/package/SpikeGLX-*-Darwin.dmg install/
-            
+
             - name: zip
               shell: bash
               run: |
@@ -135,8 +135,9 @@ jobs:
             - name: Install Qt
               uses: jurplel/install-qt-action@v4
               with:
-                version: '6.11.*'
-                cache: true
+                  version: "6.11.*"
+                  cache: true
+                  install-deps: "nosudo"
 
             - name: Checkout code
               uses: actions/checkout@v6

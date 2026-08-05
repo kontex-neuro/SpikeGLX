@@ -13,6 +13,7 @@
 #include <QNetworkInterface>
 #include <QRandomGenerator>
 #include <QRegularExpression>
+#include <QStandardPaths>
 #include <QUrl>
 
 /* ---------------------------------------------------------------- */
@@ -420,8 +421,12 @@ QString appPath()
 
 QString configPath( const QString &fileName )
 {
-    return QString("%1/_Configs/%2.ini")
-            .arg( appPath() )
+    QString path = QStandardPaths::writableLocation( QStandardPaths::AppConfigLocation ) + "/_Configs";
+
+    QDir().mkpath( path );
+
+    return QString("%1/%2.ini")
+            .arg( path )
             .arg( fileName );
 }
 

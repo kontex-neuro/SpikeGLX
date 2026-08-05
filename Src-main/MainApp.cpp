@@ -244,6 +244,7 @@ MainApp::MainApp( int &argc, char **argv )
 // App attributes
 // --------------
 
+    setApplicationName( APPNAME );
     setQuitOnLastWindowClosed( false );
 
     // default for all top windows
